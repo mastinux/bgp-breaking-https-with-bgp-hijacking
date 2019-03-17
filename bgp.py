@@ -1,126 +1,117 @@
 #!/usr/bin/env python
 
+import sys
+import os
+
 from mininet.topo import Topo
 from mininet.net import Mininet
 from mininet.log import lg, info, setLogLevel
-from mininet.util import dumpNodeConnections, quietRun, moveIntf
+from mininet.util import dumpNodeConnections, quietRun, moveIntf, waitListening
 from mininet.cli import CLI
-from mininet.node import Switch, OVSKernelSwitch
-
+from mininet.node import Switch, OVSSwitch, Controller, RemoteController, Node
 from subprocess import Popen, PIPE, check_output
-from time import sleep, time
 from multiprocessing import Process
 from argparse import ArgumentParser
+from utils import log, log2
 
-import sys
-import os
-import termcolor as T
-import time
-
-setLogLevel('info')
-
-parser = ArgumentParser("Configure simple BGP network in Mininet.")
-parser.add_argument('--rogue', action="store_true", default=False)
-parser.add_argument('--sleep', default=3, type=int)
-args = parser.parse_args()
-
-FLAGS_rogue_as = args.rogue
-ROGUE_AS_NAME = 'R4'
+BGP_CONVERGENCE_TIME = 0
+ATTACKER_ROUTER = 'R5'
 
 QUAGGA_STATE_DIR = '/var/run/quagga-1.2.4'
 
-def log(s, col="green"):
-    print T.colored(s, col)
+setLogLevel('info')
+#setLogLevel('debug')
+
+parser = ArgumentParser("Configure simple BGP network in Mininet.")
+parser.add_argument('--sleep', default=3, type=int)
+args = parser.parse_args()
 
 
 class Router(Switch):
-    """Defines a new router that is inside a network namespace so that the
-    individual routing entries don't collide.
+	"""
+	Defines a new router that is inside a network namespace so that the
+	individual routing entries don't collide.
+	"""
+	ID = 0
+	def __init__(self, name, **kwargs):
+		kwargs['inNamespace'] = True
+		Switch.__init__(self, name, **kwargs)
+		Router.ID += 1
+		self.switch_id = Router.ID
 
-    """
-    ID = 0
-    def __init__(self, name, **kwargs):
-        kwargs['inNamespace'] = True
-        Switch.__init__(self, name, **kwargs)
-        Router.ID += 1
-        self.switch_id = Router.ID
+	@staticmethod
+	def setup():
+		return
 
-    @staticmethod
-    def setup():
-        return
+	def start(self, controllers):
+		pass
 
-    def start(self, controllers):
-        pass
+	def stop(self):
+		self.deleteIntfs()
 
-    def stop(self):
-        self.deleteIntfs()
-
-    def log(self, s, col="magenta"):
-        print T.colored(s, col)
+	def log(self, s, col="magenta"):
+		print T.colored(s, col)
 
 
 class SimpleTopo(Topo):
-    """The Autonomous System topology is a simple straight-line topology
-    between AS1 -- AS2 -- AS3.  The rogue AS (AS4) connects to AS1 directly.
 
-    """
-    def __init__(self):
-        # Add default members to class.
-        super(SimpleTopo, self ).__init__()
-        num_hosts_per_as = 3
-        num_ases = 3
-        num_hosts = num_hosts_per_as * num_ases
-        # The topology has one router per AS
-	routers = []
-        for i in xrange(num_ases):
-            router = self.addSwitch('R%d' % (i+1))
-	    routers.append(router)
-        hosts = []
-        for i in xrange(num_ases):
-            router = 'R%d' % (i+1)
-            for j in xrange(num_hosts_per_as):
-                hostname = 'h%d-%d' % (i+1, j+1)
-                host = self.addNode(hostname)
-                hosts.append(host)
-                self.addLink(router, host)
+	def __init__(self):
+		# Add default members to class.
+		super(SimpleTopo, self ).__init__()
 
-        for i in xrange(num_ases-1):
-            self.addLink('R%d' % (i+1), 'R%d' % (i+2))
+		# The topology has one router per AS
+		routers = []
 
-        routers.append(self.addSwitch('R4'))
-        for j in xrange(num_hosts_per_as):
-            hostname = 'h%d-%d' % (4, j+1)
-            host = self.addNode(hostname)
-            hosts.append(host)
-            self.addLink('R4', hostname)
-        # This MUST be added at the end
-        self.addLink('R1', 'R4')
-        return
+		# R1, R2, R3, R4, R5
+		for i in xrange(5):
+			router = self.addSwitch('R%d' % (i+1))
+			routers.append(router)
+
+		# adding a single host to each router
+		hosts = []
+		for router in routers:
+			hostname = 'h%s-1' % router.replace('R', '')
+			host = self.addNode(hostname)
+			hosts.append(host)
+			self.addLink(router, host)
+
+		# adding links between routers
+		self.addLink('R3', 'R2')
+		self.addLink('R2', 'R1')
+		self.addLink('R1', 'R4')
+		self.addLink('R1', 'R5')
+
+		# adding host hosting CA to R4
+		hostname = 'h4-2'
+		host = self.addNode(hostname)
+		hosts.append(host)
+		self.addLink('R4', host)
+
+		return
 
 
 def getIP(hostname):
-    AS, idx = hostname.replace('h', '').split('-')
-    AS = int(AS)
-    if AS == 4:
-        AS = 3
-    ip = '%s.0.%s.1/24' % (10+AS, idx)
-    return ip
+	AS, idx = hostname.replace('h', '').split('-')
+	AS = int(AS)
+
+	if AS == 5:
+		AS = 3
+
+	ip = '%s.0.%s.%s/8' % (10 + AS, idx, idx)
+
+	return ip
 
 
 def getGateway(hostname):
-    AS, idx = hostname.replace('h', '').split('-')
-    AS = int(AS)
-    # This condition gives AS4 the same IP range as AS3 so it can be an
-    # attacker.
-    if AS == 4:
-        AS = 3
-    gw = '%s.0.%s.254' % (10+AS, idx)
-    return gw
+	AS, idx = hostname.replace('h', '').split('-')
+	AS = int(AS)
 
+	if AS == 5:
+		AS = 3
 
-def startWebserver(net, hostname, text="Default web server"):
-    host = net.getNodeByName(hostname)
-    return host.popen("python webserver.py --text '%s' > /tmp/%s.log" % (text, hostname), shell=True)
+	gw = '%s.0.%s.254' % (10 + AS, idx)
+
+	return gw
 
 
 def init_quagga_state_dir():
@@ -131,47 +122,88 @@ def init_quagga_state_dir():
 
 	return
 
-
+	
 def main():
-    os.system("rm -f /tmp/R*.log /tmp/h*.log /tmp/*R*.pid logs/*stdout")
-    os.system("mn -c >/dev/null 2>&1")
-    os.system("killall -9 zebra bgpd > /dev/null 2>&1")
-    os.system('pgrep -f webserver.py | xargs kill -9')
+	os.system("reset")
+
+	os.system("rm -f /tmp/bgp-R?.pid /tmp/zebra-R?.pid 2> /dev/null")
+	os.system("rm -f /tmp/R*.log /tmp/R*.pcap 2> /dev/null")
+	os.system("rm logs/R*stdout 2> /dev/null")
+	os.system("rm /tmp/hub.log /tmp/c*.log /tmp/attacks.* /tmp/atk1*.pcap " 
+		"2> /dev/null")
+	os.system("rm /tmp/tcpdump*.out /tmp/tcpdump*.err 2> /dev/null")
+	os.system("rm /tmp/R*-complete.out /tmp/R*-complete.err 2> /dev/null")
+
+	os.system("mn -c > /dev/null 2>&1")
+
+	os.system('pgrep zebra | xargs kill -9')
+	os.system('pgrep bgpd | xargs kill -9')
+	os.system('pgrep -f webserver.py | xargs kill -9')
 
 	init_quagga_state_dir()
 
-    net = Mininet(topo=SimpleTopo(), switch=Router)
-    net.start()
-    for router in net.switches:
-        router.cmd("sysctl -w net.ipv4.ip_forward=1")
-        router.waitOutput()
+	net = Mininet(topo=SimpleTopo(), switch=Router)
+	net.start()
 
-    log("Waiting %d seconds for sysctl changes to take effect..."
-        % args.sleep)
-    sleep(args.sleep)
+	log("Configuring hosts ...")
+	for host in net.hosts:
+		host.cmd("ifconfig %s-eth0 %s" % (host.name, getIP(host.name)))
+		host.cmd("route add default gw %s" % (getGateway(host.name)))
 
-    for router in net.switches:
-        if router.name == ROGUE_AS_NAME and not FLAGS_rogue_as:
-            continue
-        router.cmd("~/quagga-1.2.4/zebra/zebra -f conf/zebra-%s.conf -d -i /tmp/zebra-%s.pid > logs/%s-zebra-stdout 2>&1" % (router.name, router.name, router.name))
-        router.waitOutput()
-        router.cmd("~/quagga-1.2.4/bgpd/bgpd -f conf/bgpd-%s.conf -d -i /tmp/bgp-%s.pid > logs/%s-bgpd-stdout 2>&1" % (router.name, router.name, router.name), shell=True)
-        router.waitOutput()
-        log("Starting zebra and bgpd on %s" % router.name)
+	log("Configuring routers ...")
+	for router in net.switches:
+		router.cmd("sysctl -w net.ipv4.ip_forward=1")
+		router.waitOutput()
 
-    for host in net.hosts:
-        host.cmd("ifconfig %s-eth0 %s" % (host.name, getIP(host.name)))
-        host.cmd("route add default gw %s" % (getGateway(host.name)))
+	log2("sysctl changes to take effect", args.sleep, col='cyan')
 
-    log("Starting web servers", 'yellow')
-    startWebserver(net, 'h3-1', "Default web server")
-    startWebserver(net, 'h4-1', "*** Attacker web server ***")
+	for router in net.switches:
+		if router.name == ATTACKER_ROUTER:
+			continue
 
-    CLI(net)
-    net.stop()
-    os.system("killall -9 zebra bgpd")
-    os.system('pgrep -f webserver.py | xargs kill -9')
+		router.cmd("tcpdump -i %s-eth1 -w /tmp/%s-eth1.pcap not arp"
+			" > /tmp/tcpdump-%s-eth1.out 2> /tmp/tcpdump-%s-eth1.err &" \
+			% (router.name, router.name, router.name, router.name), shell=True)
+		router.cmd("tcpdump -i %s-eth2 -w /tmp/%s-eth2.pcap not arp"
+			" > /tmp/tcpdump-%s-eth2.out 2> /tmp/tcpdump-%s-eth2.err &" \
+			% (router.name, router.name, router.name, router.name), shell=True)
+		router.cmd("tcpdump -i %s-eth3 -w /tmp/%s-eth3.pcap not arp"
+			" > /tmp/tcpdump-%s-eth3.out 2> /tmp/tcpdump-%s-eth3.err &" \
+			% (router.name, router.name, router.name, router.name), shell=True)
+		router.cmd("tcpdump -i %s-eth4 -w /tmp/%s-eth4.pcap not arp"
+			" > /tmp/tcpdump-%s-eth4.out 2> /tmp/tcpdump-%s-eth4.err &" \
+			% (router.name, router.name, router.name, router.name), shell=True)
+
+		router.cmd("~/quagga-1.2.4/zebra/zebra -f conf/zebra-%s.conf -d -i "
+			"/tmp/zebra-%s.pid > logs/%s-zebra-stdout 2>&1" % \
+			(router.name, router.name, router.name))
+		router.waitOutput()
+
+		router.cmd("~/quagga-1.2.4/bgpd/bgpd -f conf/bgpd-%s.conf -d -i "
+			"/tmp/bgp-%s.pid > logs/%s-bgpd-stdout 2>&1" % \
+			(router.name, router.name, router.name), shell=True)
+		router.waitOutput()
+
+		log("Starting zebra and bgpd on %s" % router.name)
+
+	log2("BGP convergence", BGP_CONVERGENCE_TIME, 'cyan')
+
+	CLI(net)
+
+	net.stop()
+
+	os.system('pgrep zebra | xargs kill -9')
+	os.system('pgrep bgpd | xargs kill -9')
+	os.system('pgrep -f webserver.py | xargs kill -9')
+
+	#os.system('sudo wireshark /tmp/R100-eth2.pcap -Y \'icmp\' &')
+	#os.system('sudo wireshark /tmp/R100-eth3.pcap -Y \'icmp\' &')
+	#os.system('sudo wireshark /tmp/R10-eth3.pcap -Y \'icmp\' &')
+	#os.system('sudo wireshark /tmp/R40-eth2.pcap -Y \'icmp\' &')
+	#os.system('sudo wireshark /tmp/R30-eth2.pcap -Y \'icmp\' &')
+	#os.system('sudo wireshark /tmp/R20-eth3.pcap -Y \'icmp\' &')
+	#os.system('sudo wireshark /tmp/R200-eth1.pcap -Y \'icmp\' &')
 
 
 if __name__ == "__main__":
-    main()
+	main()
