@@ -122,6 +122,11 @@ def init_quagga_state_dir():
 
 	return
 
+
+def startWebserver(net, hostname, text="Default web server"):
+    host = net.getNodeByName(hostname)
+    return host.popen("python webserver.py --text '%s' > /tmp/%s.log" % (text, hostname), shell=True)
+
 	
 def main():
 	os.system("reset")
@@ -187,6 +192,10 @@ def main():
 		log("Starting zebra and bgpd on %s" % router.name)
 
 	log2("BGP convergence", BGP_CONVERGENCE_TIME, 'cyan')
+
+	log("Starting web servers", 'yellow')
+	startWebserver(net, 'h3-1', "Default web server")
+	startWebserver(net, 'h5-1', "*** Attacker web server ***")
 
 	CLI(net)
 
