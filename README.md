@@ -4,6 +4,16 @@ Descrizione dell'attacco disponibile qui: https://www.blackhat.com/docs/us-15/ma
 
 ---
 
+SERVER HTTPS CON PYTHON https://gist.github.com/dergachev/7028596
+
+CREARE UNA CA https://workaround.org/certificate-authority/
+
+CERTIFICATO PER APACHE SERVER https://www.linux.com/learn/creating-self-signed-ssl-certificates-apache-linux
+
+VERIFICARE CERTIFICATO DA COMMAND LINE https://www.cyberciti.biz/faq/test-ssl-certificates-diagnosis-ssl-certificate/
+
+---
+
 ## Preparazione Mininet
 
 - `git clone https://github.com/mininet/mininet`
