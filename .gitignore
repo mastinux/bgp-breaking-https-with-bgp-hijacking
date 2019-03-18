@@ -3,3 +3,7 @@
 *.pyc
 
 logs/*stdout
+
+CA/demoCA/*
+
+*.pem

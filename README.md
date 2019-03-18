@@ -4,10 +4,6 @@ Descrizione dell'attacco disponibile qui: https://www.blackhat.com/docs/us-15/ma
 
 ---
 
-SERVER HTTPS CON PYTHON https://gist.github.com/dergachev/7028596
-
-CREARE UNA CA https://workaround.org/certificate-authority/
-
 CERTIFICATO PER APACHE SERVER https://www.linux.com/learn/creating-self-signed-ssl-certificates-apache-linux
 
 VERIFICARE CERTIFICATO DA COMMAND LINE https://www.cyberciti.biz/faq/test-ssl-certificates-diagnosis-ssl-certificate/
@@ -50,7 +46,87 @@ VERIFICARE CERTIFICATO DA COMMAND LINE https://www.cyberciti.biz/faq/test-ssl-ce
 
 ## Esecuzione dell'attacco
 
-\# TODO
+**installa openssl**
+
+`apt install openssl`
+
+**pulire la $HOME da .rnd**
+
+`rm ~/.rnd`
+
+**crea una CA** in `./CA`
+
+> https://workaround.org/certificate-authority/
+
+in `./CA` lanciare
+
+`/usr/lib/ssl/misc/CA.pl -newca`
+
+invio per creare una nuova CA
+
+PEM pass phrase: password
+
+Country Name (2 letter code) [AU]:IT  
+State or Province Name (full name) [Some-State]:Lazio   
+Locality Name (eg, city) []:Roma  
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:RootCA  
+Organizational Unit Name (eg, section) []:IT  
+Common Name (e.g. server FQDN or YOUR name) []:rootca.it  
+Email Address []:admin@rootca.it
+
+A challenge password []:password  
+An optional company name []:RootCA  
+Enter pass phrase for ./demoCA/private/cakey.pem: password
+
+`./CA/demoCA/cacert.pem` certificato pubblico della CA
+
+**crea la richiesta del server alla CA** in `./server`
+
+`/usr/lib/ssl/misc/CA.pl -newreq`
+
+PEM pass phrase: server
+
+Country Name (2 letter code) [AU]:IT  
+State or Province Name (full name) [Some-State]:Lazio  
+Locality Name (eg, city) []:Roma  
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:MainServer  
+Organizational Unit Name (eg, section) []:IT  
+Common Name (e.g. server FQDN or YOUR name) []:13.0.1.1  
+Email Address []:admin@mainserver.it
+
+A challenge password []:server  
+An optional company name []:MainServer
+
+`./server/newkey.pem` chiave privata  
+`./server/newreq.pem` richiesta
+
+**firma la richiesta e crea il certificato per il server**
+
+copia `./server/newreq.pem` in `./CA`
+
+in `./CA` firma la richiesta
+
+`/usr/lib/ssl/misc/CA.pl -sign`
+
+Enter pass phrase for ./demoCA/private/cakey.pem:password  
+Sign the certificate? [y/n]:y  
+1 out of 1 certificate requests certified, commit? [y/n]y
+
+copia il certificato `./CA/newcert.pem` in `./server`
+
+**preparare il certificato per il webserver**
+
+> https://stackoverflow.com/a/20908026
+
+in `./server`
+
+`openssl rsa -in newkey.pem -out newkey_unencrypted.pem`
+
+**accedere al webserver verificando il certificato**
+
+`./website-https.sh`
+
+\# TODO continua
 
 <!--
 

@@ -125,7 +125,22 @@ def init_quagga_state_dir():
 
 def startWebserver(net, hostname, text="Default web server"):
     host = net.getNodeByName(hostname)
-    return host.popen("python webserver.py --text '%s' > /tmp/%s.log" % (text, hostname), shell=True)
+
+    host_address = getIP(hostname).split('/')[0]
+
+    return host.popen("python webserver.py --text '%s' --hostname %s "
+		"> /tmp/%s.log 2>&1" \
+		% (text, host_address, hostname), shell=True)
+
+
+def startHTTPSWebserver(net, hostname, text="Default HTTPS web server"):
+    host = net.getNodeByName(hostname)
+
+    host_address = getIP(hostname).split('/')[0]
+
+    return host.popen("python webserver-https.py --text '%s' --hostname %s"
+		" > /tmp/%s-https.log 2>&1" % \
+		(text, host_address, hostname), shell=True)
 
 	
 def main():
@@ -144,6 +159,7 @@ def main():
 	os.system('pgrep zebra | xargs kill -9')
 	os.system('pgrep bgpd | xargs kill -9')
 	os.system('pgrep -f webserver.py | xargs kill -9')
+	os.system('pgrep -f webserver-https.py | xargs kill -9')
 
 	init_quagga_state_dir()
 
@@ -195,7 +211,7 @@ def main():
 
 	log("Starting web servers", 'yellow')
 	startWebserver(net, 'h3-1', "Default web server")
-	startWebserver(net, 'h5-1', "*** Attacker web server ***")
+	startHTTPSWebserver(net, 'h3-1', "Default HTTPS web server")
 
 	CLI(net)
 
@@ -204,6 +220,7 @@ def main():
 	os.system('pgrep zebra | xargs kill -9')
 	os.system('pgrep bgpd | xargs kill -9')
 	os.system('pgrep -f webserver.py | xargs kill -9')
+	os.system('pgrep -f webserver-https.py | xargs kill -9')
 
 	#os.system('sudo wireshark /tmp/R100-eth2.pcap -Y \'icmp\' &')
 	#os.system('sudo wireshark /tmp/R100-eth3.pcap -Y \'icmp\' &')

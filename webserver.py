@@ -4,6 +4,7 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--text', default="Default web server")
+parser.add_argument('--hostname', default="localhost")
 FLAGS = parser.parse_args()
 
 class Handler(SimpleHTTPServer.SimpleHTTPRequestHandler):
@@ -19,7 +20,7 @@ class Handler(SimpleHTTPServer.SimpleHTTPRequestHandler):
         self.wfile.flush()
 
 
-print "starting webserver serving", FLAGS.text
+print "starting webserver on %s serving", (FLAGS.hostname, FLAGS.text)
 
 PORT = 80
 httpd = SocketServer.TCPServer(("", PORT), Handler)
