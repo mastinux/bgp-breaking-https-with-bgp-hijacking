@@ -128,7 +128,9 @@ def startWebserver(net, hostname, text="Default web server"):
 
     host_address = getIP(hostname).split('/')[0]
 
-    return host.popen("python webserver.py --text '%s' --hostname %s "
+    print host_address
+
+    return host.popen("python webserver.py --text '%s' --address %s "
 		"> /tmp/%s.log 2>&1" \
 		% (text, host_address, hostname), shell=True)
 
@@ -138,7 +140,9 @@ def startHTTPSWebserver(net, hostname, text="Default HTTPS web server"):
 
     host_address = getIP(hostname).split('/')[0]
 
-    return host.popen("python webserver-https.py --text '%s' --hostname %s"
+    print host_address
+
+    return host.popen("python webserver-https.py --text '%s' --address %s"
 		" > /tmp/%s-https.log 2>&1" % \
 		(text, host_address, hostname), shell=True)
 
@@ -160,6 +164,8 @@ def main():
 	os.system('pgrep bgpd | xargs kill -9')
 	os.system('pgrep -f webserver.py | xargs kill -9')
 	os.system('pgrep -f webserver-https.py | xargs kill -9')
+
+	sys.exit(1)
 
 	init_quagga_state_dir()
 
@@ -210,8 +216,9 @@ def main():
 	log2("BGP convergence", BGP_CONVERGENCE_TIME, 'cyan')
 
 	log("Starting web servers", 'yellow')
-	startWebserver(net, 'h3-1', "Default web server")
+	#startWebserver(net, 'h3-1', "Default web server")
 	startHTTPSWebserver(net, 'h3-1', "Default HTTPS web server")
+	#startWebserver(net, 'h5-1', "Malicious Default web server")
 
 	CLI(net)
 

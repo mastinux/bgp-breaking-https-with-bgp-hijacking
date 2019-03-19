@@ -4,7 +4,7 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--text', default="Default web server")
-parser.add_argument('--hostname', default="localhost")
+parser.add_argument('--address', default="127.0.0.1")
 FLAGS = parser.parse_args()
 
 # https://blog.anvileight.com/posts/simple-python-http-server/#python-2-x-1
@@ -23,9 +23,9 @@ class Handler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 		self.wfile.flush()
 
 
-print "starting HTTPS webserver on %s serving", (FLAGS.hostname, FLAGS.text)
+print "starting HTTPS webserver on %s serving", (FLAGS.address, FLAGS.text)
 
-httpd = BaseHTTPServer.HTTPServer((FLAGS.hostname, 443), Handler)
+httpd = BaseHTTPServer.HTTPServer((FLAGS.address, 443), Handler)
 
 httpd.socket = ssl.wrap_socket (httpd.socket, \
         keyfile="./server/newkey_unencrypted.pem", \
