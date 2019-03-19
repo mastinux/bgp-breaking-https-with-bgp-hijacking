@@ -38,6 +38,14 @@ Descrizione dell'attacco disponibile qui: https://www.blackhat.com/docs/us-15/ma
 
 ![topology](./images/bgp-breaking-https-with-bgp-hijacking.png)
 
+![topology](./images/bgp-breaking-https-with-bgp-hijacking-0.png)
+
+![topology](./images/bgp-breaking-https-with-bgp-hijacking-1.png)
+
+![topology](./images/bgp-breaking-https-with-bgp-hijacking-2.png)
+
+![topology](./images/bgp-breaking-https-with-bgp-hijacking-3.png)
+
 \# TODO
 
 ## Esecuzione dell'attacco
