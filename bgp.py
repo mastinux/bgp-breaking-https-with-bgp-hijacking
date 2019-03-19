@@ -165,8 +165,6 @@ def main():
 	os.system('pgrep -f webserver.py | xargs kill -9')
 	os.system('pgrep -f webserver-https.py | xargs kill -9')
 
-	sys.exit(1)
-
 	init_quagga_state_dir()
 
 	net = Mininet(topo=SimpleTopo(), switch=Router)

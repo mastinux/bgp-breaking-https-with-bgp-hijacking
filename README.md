@@ -52,7 +52,7 @@ VERIFICARE CERTIFICATO DA COMMAND LINE https://www.cyberciti.biz/faq/test-ssl-ce
 
 `apt install openssl`
 
-**pulire la $HOME da .rnd**
+**pulisci la $HOME da .rnd**
 
 `rm ~/.rnd`
 

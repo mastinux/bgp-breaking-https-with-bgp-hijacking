@@ -20,7 +20,7 @@ class Handler(SimpleHTTPServer.SimpleHTTPRequestHandler):
         self.wfile.flush()
 
 
-print "starting webserver on %s serving", (FLAGS.address, FLAGS.text)
+print "starting webserver on %s serving %s" % (FLAGS.address, FLAGS.text)
 
 PORT = 80
 httpd = SocketServer.TCPServer((FLAGS.address, PORT), Handler)
