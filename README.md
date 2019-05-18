@@ -182,7 +182,7 @@ in `./server`
 
 copia `./malicious-server/newreq.pem` in `./CA`
 
-`cp ./malicious-server/newreq.pem ./CA`
+`$ cp ./malicious-server/newreq.pem ./CA`
 
 in `./CA/demoCA/index.txt.attr` imposta il flag `unique_subject` a `no`
 
