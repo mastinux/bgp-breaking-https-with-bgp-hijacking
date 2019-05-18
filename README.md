@@ -71,11 +71,11 @@ Il client C accede al server A sotto il controllo dell'attaccante verificando co
 
 **1. installa openssl**
 
-`apt install openssl`
+`# apt install openssl`
 
 **2. pulisci la $HOME da .rnd**
 
-`rm ~/.rnd`
+`$ rm ~/.rnd`
 
 **3. crea una CA** in `./CA`
 
@@ -83,7 +83,7 @@ Il client C accede al server A sotto il controllo dell'attaccante verificando co
 
 in `./CA` lanciare
 
-`/usr/lib/ssl/misc/CA.pl -newca`
+`$ /usr/lib/ssl/misc/CA.pl -newca`
 
 	PEM pass phrase: password
 
@@ -99,11 +99,11 @@ in `./CA` lanciare
 	An optional company name []:RootCA  
 	Enter pass phrase for ./demoCA/private/cakey.pem: password
 
-`./CA/demoCA/cacert.pem` certificato pubblico della CA
+`$ ./CA/demoCA/cacert.pem` certificato pubblico della CA
 
 **4. crea la richiesta del server alla CA** in `./server`
 
-`/usr/lib/ssl/misc/CA.pl -newreq`
+`$ /usr/lib/ssl/misc/CA.pl -newreq`
 
 	PEM pass phrase: server
 
@@ -125,13 +125,15 @@ in `./CA` lanciare
 
 copia `./server/newreq.pem` in `./CA`
 
+`$ cp ./server/newreq.pem ./CA`
+
 in `./CA` firma la richiesta
 
-`/usr/lib/ssl/misc/CA.pl -sign`
+`$ /usr/lib/ssl/misc/CA.pl -sign`
 
-Enter pass phrase for ./demoCA/private/cakey.pem:password  
-Sign the certificate? [y/n]:y  
-1 out of 1 certificate requests certified, commit? [y/n]y
+	Enter pass phrase for ./demoCA/private/cakey.pem:password  
+	Sign the certificate? [y/n]:y  
+	1 out of 1 certificate requests certified, commit? [y/n]y
 
 copia il certificato `./CA/newcert.pem` in `./server`
 
@@ -141,15 +143,15 @@ copia il certificato `./CA/newcert.pem` in `./server`
 
 in `./server`
 
-`openssl rsa -in newkey.pem -out newkey_unencrypted.pem`
+`$ openssl rsa -in newkey.pem -out newkey_unencrypted.pem`
 
 **7. accedi al server verificando il certificato**
 
-`./client-curls-server-https.sh`
+`$ ./client-curls-server-https.sh`
 
 **8. crea la richiesta del malicious-server alla CA** in `./malicious-server`
 
-`/usr/lib/ssl/misc/CA.pl -newreq`
+`$ /usr/lib/ssl/misc/CA.pl -newreq`
 
 	Enter PEM pass phrase:malicious
 
@@ -166,19 +168,21 @@ in `./server`
 
 **9. lancia l'hijacking**
 
-`./start-malicious-AS.sh`
+`$ ./start-malicious-AS.sh`
 
 **10. avvia il malicious-server**
 
-`./start-malicious-server.sh`
+`$ ./start-malicious-server.sh`
 
 **11. verifica che la CA raggiunga il malicious-server**
 
-`./CA-curls-server.sh`
+`$ ./CA-curls-server.sh`
 
 **12. firma la richiesta e crea il certificato per il malicious-server**
 
 copia `./malicious-server/newreq.pem` in `./CA`
+
+`cp ./malicious-server/newreq.pem ./CA`
 
 in `./CA/demoCA/index.txt.attr` imposta il flag `unique_subject` a `no`
 
@@ -187,19 +191,21 @@ il flag modificato rimuove questo vincolo
 
 in `./CA` firma la richiesta
 
-`/usr/lib/ssl/misc/CA.pl -sign`
+`$ /usr/lib/ssl/misc/CA.pl -sign`
 
 copia il certificato `./CA/newcert.pem` in `./malicious-server`
+
+`$ cp ./CA/newcert.pem ./malicious-server`
 
 **13. prepara il certificato per malicious-server**
 
 in `./malicious-server`
 
-`openssl rsa -in newkey.pem -out newkey_unencrypted.pem`
+`$ openssl rsa -in newkey.pem -out newkey_unencrypted.pem`
 
 **14. avvia il malicious-server col certificato ottenuto**
 
-`./start-malicious-server-https.sh`
+`$ ./start-malicious-server-https.sh`
 
 **15. accedi al malicious-server verificando il certificato**
 
