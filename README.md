@@ -38,7 +38,7 @@ Scaricare quagga-1.2.4 from [http://download.savannah.gnu.org/releases/quagga/](
 
 ---
 
-## Esecuzione dell'attacco
+## Descrizione dell'attacco
 
 ![topology](./images/bgp-breaking-https-with-bgp-hijacking.png)
 
