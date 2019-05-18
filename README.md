@@ -1,40 +1,44 @@
 # bgp-breaking-https-with-bgp-hijacking
 
-Descrizione dell'attacco disponibile qui: https://www.blackhat.com/docs/us-15/materials/us-15-Gavrichenkov-Breaking-HTTPS-With-BGP-Hijacking.pdf
+## Installazione VM
+
+Scaricare la VM Mininet [http://www.scs.stanford.edu/~jvimal/mininet-sigcomm14/mininet-tutorial-vm-64bit.zip](http://www.scs.stanford.edu/~jvimal/mininet-sigcomm14/mininet-tutorial-vm-64bit.zip).  
+Per accedere:
+
+- username: mininet
+- password: mininet
+
+## Preparazione mininet
+
+- `$ git clone https://github.com/mininet/mininet`
+
+- `$ cd mininet`
+
+- `$ git checkout 2.3.0d4`
+
+- `$ ./util/install.sh -a`
+
+- `$ mn --test pingall`
+
+- `$ mn --version`
+
+## Quagga preparation
+
+Scaricare quagga-1.2.4 from [http://download.savannah.gnu.org/releases/quagga/](http://download.savannah.gnu.org/releases/quagga/) nella tua `$HOME` ed estrai il package
+
+- `$ cd ~/quagga-1.2.4`
+
+- `# chown mininet:mininet /var/run/quagga`
+
+- modifica il file `configure`, aggiungendo `${quagga_statedir_prefix}/var/run/quagga` prima di tutte le opzioni del loop su `QUAGGA_STATE_DIR` 
+
+- `$ ./configure --enable-user=mininet --enable-group=mininet`
+
+- `$ make`
 
 ---
 
-## Preparazione Mininet
-
-- `git clone https://github.com/mininet/mininet`
-
-- `cd mininet`
-
-- `git checkout 2.3.0d4`
-
-- `util/install.sh -a`
-
-- `mn --test pingall`
-
-- `mn --version`
-
-## Preparazione Quagga
-
-- esegui il download quagga-1.2.4 da [qui](http://download.savannah.gnu.org/releases/quagga/) nella tua `$HOME` ed estrai il file compresso
-
-- `cd ~/quagga-1.2.4`
-
-- `chown mininet:mininet /var/run/quagga`
-
-- modifica il file `configure`, aggiungendo `${quagga_statedir_prefix}/var/run/quagga` prima di tutte le opzioni nel loop `for` per `QUAGGA_STATE_DIR`
-
-- `./configure --enable-user=mininet --enable-group=mininet`
-
-- `make`
-
----
-
-## Descrizione dell'attacco
+## Esecuzione dell'attacco
 
 ![topology](./images/bgp-breaking-https-with-bgp-hijacking.png)
 
